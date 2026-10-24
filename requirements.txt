@@ -1,0 +1,5 @@
+fprintd
+libglib2.0-0
+libgusb2
+libnss3
+libusb-1.0-0
