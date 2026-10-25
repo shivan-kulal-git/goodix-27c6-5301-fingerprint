@@ -1,116 +1,99 @@
 # Goodix 27c6:5301 Fingerprint Driver for Ubuntu/Linux
 
-A community driver implementation for the **Goodix `27c6:5301` fingerprint reader**, designed to work with the Linux `libfprint` and `fprintd` fingerprint authentication stack.
+A community driver project for the **Goodix USB fingerprint reader `27c6:5301`**, intended to integrate with Linux `libfprint` and `fprintd`.
 
-This repository contains the driver source code, prebuilt library, installation and uninstall scripts, and instructions for building from source.
+This repository contains driver source, prebuilt library files, installation and uninstall scripts, and build documentation.
 
-## Hardware Compatibility
+> **Status:** The project author reports this driver working on their hardware. Compatibility with other machines and software configurations should be verified separately. This is not an official upstream `libfprint` driver unless and until it is accepted upstream.
 
-| Property | Details |
-|---|---|
-| USB Vendor ID | `27c6` |
-| USB Product ID | `5301` |
-| USB ID | `27c6:5301` |
-| USB Interfaces | CDC ACM and bulk data interfaces |
-| Kernel Interface | `cdc_acm` |
-| Firmware String | `GF3208_HT_APP_10035` |
-| Fingerprint Framework | `libfprint` / `fprintd` |
+## Contents
 
-The reader is found in certain laptop models, including some ASUS and Dell devices. A matching USB ID does not guarantee compatibility with every device.
-
-### Tested Environment
-
-- Ubuntu 24.04
-- Linux kernel 6.8 or later
-- x86_64 systems
-
-Other distribution versions and hardware configurations may require additional testing.
-
-## Repository Contents
-
-- `src/goodix5301.c` — fingerprint driver implementation.
-- `src/goodix5301.h` — driver header.
-- `drivers/` — prebuilt library files.
+- `src/goodix5301.c` and `src/goodix5301.h` — driver source.
+- `drivers/` — prebuilt driver/library files, if included in this checkout.
 - `scripts/install.sh` — installation script.
 - `scripts/uninstall.sh` — uninstall script.
-- `docs/BUILD.md` — source-build instructions, if included in the repository.
+- `docs/BUILD.md` — source-build instructions, if included.
+- `docs/TROUBLESHOOTING.md` — diagnostic commands and common issues.
+- `docs/TESTED-HARDWARE.md` — a template for recording verified configurations.
 
-## Quick Install — Prebuilt Library
+Check that these paths match the files in the current repository.
 
-### 1. Check Your Fingerprint Reader
+## Hardware
 
-Connect your device and run:
+| Property | Value |
+|---|---|
+| USB vendor ID | `27c6` |
+| USB product ID | `5301` |
+| USB ID | `27c6:5301` |
+| Reported interfaces | CDC ACM and bulk data interfaces |
+| Reported firmware string | `GF3208_HT_APP_10035` |
+| Framework | `libfprint` / `fprintd` |
+
+Some ASUS and Dell models may use this USB ID, but the same ID alone does not guarantee that every model or firmware revision will work.
+
+## Tested configuration
+
+See [`docs/TESTED-HARDWARE.md`](docs/TESTED-HARDWARE.md). Record exact results from hardware you personally tested. Do not treat an untested model, Ubuntu release, kernel, or `libfprint` version as supported merely because it is listed as potentially compatible.
+
+## Safety and compatibility
+
+- The prebuilt library is intended for a compatible **Linux x86_64** environment. Do not install it on a different architecture unless you have built and tested an appropriate version.
+- Compatibility depends on the `libfprint` version, build options, distribution packaging, and driver integration—not only the Linux kernel version.
+- The installer uses administrator privileges and may modify system library files or service state. Read `scripts/install.sh` before running it.
+- Keep password authentication available and ensure you have another way to access your machine before changing PAM/login configuration.
+- Review `scripts/uninstall.sh` before using it. Its exact rollback behavior depends on the implementation in this repository.
+- Do not upload fingerprint images, templates, or other biometric data to public issues.
+
+## Quick install (prebuilt library)
+
+### 1. Check the device
 
 ```bash
 lsusb -d 27c6:5301
 ```
 
-Confirm that the output identifies your fingerprint reader.
+Confirm that the expected fingerprint reader appears.
 
-### 2. Clone the Repository
+### 2. Clone the repository
 
 ```bash
 git clone https://github.com/shivan-kulal-git/goodix-27c6-5301-fingerprint.git
 cd goodix-27c6-5301-fingerprint
 ```
 
-### 3. Install the Driver
-
-Review the installation script before executing it with administrator privileges:
+### 3. Review and run the installer
 
 ```bash
 less scripts/install.sh
-```
-
-Install the driver:
-
-```bash
 sudo ./scripts/install.sh
 ```
 
-The installer is intended to install the prebuilt library under:
+The project documentation describes the installer as placing a library under `/usr/local/lib/x86_64-linux-gnu/`, updating the dynamic linker cache, and restarting `fprintd`. Confirm these actions in the current script before proceeding.
 
-`/usr/local/lib/x86_64-linux-gnu/`
-
-It also updates the dynamic linker cache and restarts the fingerprint service, as described by the project.
-
-### 4. Enroll Your Fingerprint
-
-After installation, enroll a fingerprint for your current user:
+### 4. Enroll and verify
 
 ```bash
 fprintd-enroll "$USER"
-```
-
-Follow the on-screen instructions to scan your finger.
-
-### 5. Verify Fingerprint Recognition
-
-```bash
 fprintd-verify "$USER"
 ```
 
-Successful verification confirms that fingerprint recognition is working.
+Successful verification confirms fingerprint matching works. It does **not** by itself confirm that login or `sudo` authentication has been enabled.
 
-## Enable Fingerprint Login
+## Enable login or sudo authentication
 
-After enrollment and verification, configure fingerprint authentication through your distribution's supported settings or PAM configuration.
-
-On Ubuntu, you can inspect available authentication modules with:
+Configure fingerprint authentication using the supported settings for your distribution. On Ubuntu, `sudo pam-auth-update` may show available PAM profiles:
 
 ```bash
 sudo pam-auth-update
 ```
 
-The available options depend on the installed packages and system configuration.
+The available options depend on installed packages and system configuration. Keep password authentication enabled as a fallback, and test login and `sudo` separately. Do not manually edit PAM files unless you understand how to recover if authentication fails.
 
-Keep password authentication available as a fallback, and test login and `sudo` authentication separately.
+## Build from source
 
-## Build from Source
+The driver must be integrated into a compatible `libfprint` source tree. The exact integration changes and Meson options vary by source version.
 
-The driver can be integrated into a compatible `libfprint` source tree.
-
-### 1. Install Build Dependencies
+Install the dependencies listed by your build guide. A typical Ubuntu starting point is:
 
 ```bash
 sudo apt update
@@ -119,45 +102,24 @@ sudo apt install git build-essential meson ninja-build pkg-config \
   gtk-doc-tools
 ```
 
-### 2. Clone the libfprint Repository
+Clone upstream `libfprint`:
 
 ```bash
 git clone https://gitlab.freedesktop.org/libfprint/libfprint.git
 cd libfprint
 ```
 
-### 3. Add the Driver Source
+Follow [`docs/BUILD.md`](docs/BUILD.md) in this repository for the required driver registration, source integration, and build options.
 
-Copy the driver files into the appropriate driver directory in the source tree:
+**Do not assume** that `meson setup builddir -Ddrivers=goodix5301` works with every `libfprint` version. Use that command only if the selected source tree's Meson configuration registers `goodix5301` and accepts that option. Copying the `.c` and `.h` files alone does not necessarily register or compile the driver.
 
-```bash
-cp ../src/goodix5301.c libfprint/drivers/
-cp ../src/goodix5301.h libfprint/drivers/
-```
+For reproducibility, document the exact upstream `libfprint` release or Git commit and any patches used to build the prebuilt library.
 
-**Important:** The commands above assume the `src` directory is available at the relative path shown. Adjust the paths if your directory layout differs.
+## USB interface notes
 
-### 4. Configure the Build
+The project reports that the reader uses CDC ACM and bulk data interfaces, and that `cdc_acm` may need to be detached temporarily while the sensor is in use. The driver is intended to handle this behavior.
 
-Register the driver in the relevant Meson build files as described in `docs/BUILD.md`.
-
-Then configure and build using the Meson options supported by your selected `libfprint` version.
-
-```bash
-meson setup builddir -Ddrivers=goodix5301
-ninja -C builddir
-sudo ninja -C builddir install
-```
-
-The Meson option above must match the actual driver registration and build configuration. Refer to the project's build documentation if the option is not recognized.
-
-## USB Interface Notes
-
-The sensor uses CDC ACM and bulk data interfaces.
-
-The driver documentation indicates that the `cdc_acm` kernel driver may need to be detached temporarily during sensor operation. The driver is intended to handle this behavior.
-
-If the device is not detected, collect diagnostic information:
+If the device is not detected, collect diagnostics:
 
 ```bash
 lsusb -d 27c6:5301
@@ -165,69 +127,28 @@ systemctl status fprintd --no-pager
 journalctl -u fprintd -b --no-pager
 ```
 
+Do not manually detach USB interfaces unless the driver documentation specifically calls for it.
+
 ## Uninstallation
 
-The repository includes an uninstall script.
-
-Review its contents before running it:
+The repository includes `scripts/uninstall.sh`. Inspect it first:
 
 ```bash
 less scripts/uninstall.sh
 ```
 
-If you need to remove the custom driver installation, run the script according to the repository's documented procedure:
-
-```bash
-sudo ./scripts/uninstall.sh
-```
+Then follow the repository's documented uninstall procedure. Confirm what the script removes or restores before running it.
 
 ## Troubleshooting
 
-### Fingerprint device not detected
+See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for diagnostic commands and common failure cases.
 
-Check the USB ID:
+## Upstream status
 
-```bash
-lsusb -d 27c6:5301
-```
+This is a community-maintained driver project. Do not describe it as officially supported by upstream `libfprint` unless a corresponding upstream change has been accepted. If this implementation adapts code from another project, identify the original source and preserve the required notices and license terms.
 
-### Fingerprint service errors
+## License and attribution
 
-```bash
-systemctl status fprintd --no-pager
-journalctl -u fprintd -b --no-pager
-```
+The repository currently declares **LGPL-2.1-or-later**. Confirm that this license and its notices are appropriate for every file distributed here, including any prebuilt library. If the binary is built from a modified LGPL-covered `libfprint`, follow the applicable requirements for distributing modified library binaries and corresponding source. Preserve notices and attribution for any code adapted from other projects.
 
-### Enrollment or verification fails
-
-- Confirm that the expected sensor is connected.
-- Check that the driver library is installed in the intended location.
-- Restart the fingerprint service.
-- Review the service logs for errors.
-
-## Contributing
-
-Bug reports and contributions are welcome.
-
-When reporting an issue, include:
-
-- Laptop model.
-- Linux distribution and version.
-- Kernel version.
-- USB ID.
-- Relevant `fprintd` logs.
-- Whether enrollment and verification work.
-
-Do not upload fingerprint images, biometric templates, or other sensitive biometric data to public issues.
-
-## License
-
-This project declares **LGPL-2.1-or-later**, following the licensing approach of `libfprint`.
-
-Review the applicable license and attribution requirements for the driver source and any distributed prebuilt library.
-
-## Acknowledgments
-
-This project builds on the Linux fingerprint ecosystem, including `libfprint` and `fprintd`.
-
-Thanks to the open-source developers and Linux community members working to improve fingerprint support for unsupported hardware.
+Include a complete `LICENSE` file in the repository if it is not already present. Do not add a license file with guessed or incomplete text.
